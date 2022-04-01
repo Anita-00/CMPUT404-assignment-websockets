@@ -35,13 +35,14 @@ class World:
         self.sockets = []
 
     def add_set_listener(self, listener):
-        self.listeners.append(listener)
+        # self.listeners.append(listener)
+        pass
 
     def update(self, entity, key, value):
         entry = self.space.get(entity, dict())
         entry[key] = value
         self.space[entity] = entry
-        self.update_listeners(entity)
+        # self.update_listeners(entity)
 
     def set(self, entity, data):
         self.space[entity] = data
@@ -64,14 +65,15 @@ class World:
 
 myWorld = World()
 
-def set_listener(entity, data):
-    ''' do something with the update ! '''
-    for key in data.keys():
-        myWorld.update(entity, key, data[key])
-    return myWorld.get(entity)
-
-
-myWorld.add_set_listener(set_listener)
+#
+# def set_listener(entity, data):
+#     ''' do something with the update ! '''
+#     for key in data.keys():
+#         myWorld.update(entity, key, data[key])
+#     return myWorld.get(entity)
+#
+#
+# myWorld.add_set_listener(set_listener)
 
 
 @app.route('/')
@@ -84,8 +86,9 @@ def read_ws(ws, client):
     '''A greenlet function that reads from the websocket and updates the world'''
     try:
         while True:
-            packet = json.loads(ws.receive())
-            if packet is not None:
+            _msg = ws.receive()
+            if _msg is not None:
+                packet = json.loads(_msg)
                 try:
                     data = packet["data"]
                     entity = packet["entity"]
@@ -96,10 +99,9 @@ def read_ws(ws, client):
                         else:
                             myWorld.sockets.remove(s)
                 except:
-                    print("error")
                     for s in myWorld.sockets:
                         if not s.closed:
-                            s.send(json.dumps(myWorld.world()))
+                            s.send(json.dumps({"error": True}))
                         else:
                             myWorld.sockets.remove(s)
             else:
@@ -118,6 +120,7 @@ def subscribe_socket(ws):
     g = gevent.spawn(read_ws, ws, 1)
     msg = json.dumps(myWorld.world())
     ws.send(msg)
+
     try:
         while ws in myWorld.sockets:
             # block here
